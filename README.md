@@ -2,7 +2,7 @@
 
 A self-hosted system that **writes posts, publishes them on schedule, watches comments,
 drafts replies, likes positive comments, and tracks metrics**. Every step has guardrails
-built for a healthcare business.
+built for healthcare businesses.
 
 | What it does | How |
 |---|---|
@@ -61,38 +61,33 @@ python -m tbs_social --demo serve --monitor-every 1
 - **Post text-only to Instagram.** Instagram requires an image, so add an image URL when
   you approve the draft.
 
-## HIPAA and compliance guardrails
+## Compliance modes
 
-Social media is a common source of HIPAA complaints, usually because a practice replied
-publicly in a way that confirmed someone was a patient. The system enforces:
+`TBS_COMPLIANCE=standard` (default) is for business and marketing accounts:
+- Banned phrases (`brand.toml`) block a post from being approved.
+- Replies are blocked if they would repeat someone's phone number, email or ID number in public.
+- Complaints, sales/demo inquiries and support questions are flagged for staff.
 
-- **Deterministic checks (`tbs_social/compliance.py`) that run whatever the AI says.**
-  - Inbound comments with health details, identifiers or contact info are flagged "needs staff".
-  - Nobody can like those comments.
-  - Replies that would confirm a patient relationship ("your appointment", "your treatment",
-    "welcome back") are blocked, even when staff send them.
-  - Banned phrases (cure, guaranteed…) block a post from being approved.
-- **Possible-emergency detection.** Red-flag symptoms or self-harm language get flagged so
-  staff can respond personally.
-- **Redaction.** Phone numbers, emails, ID numbers and dates are removed before a comment
-  is sent to Claude.
-- **Audit log.** Everything the system posts is recorded on the Activity page.
+### HIPAA mode
 
-Before connecting real patient-facing accounts:
-- Sign a **Business Associate Agreement** with Anthropic, or confirm your API use is
-  covered. Public comments can still contain PHI even after redaction.
-- Have your privacy officer review `brand.toml` and the compliance rules.
-- Testimonials and patient stories need written HIPAA authorization. The system flags
-  drafts that mention them.
+Set `TBS_COMPLIANCE=hipaa` only if an account talks directly to patients. It adds:
+- Comments with health details or identifiers are flagged "needs staff", and nobody can like them.
+- Replies that would confirm a patient relationship ("your appointment", "welcome back") are
+  blocked, even when staff send them.
+- Possible-emergency detection (red-flag symptoms, self-harm language).
+- Phone numbers, emails, ID numbers and dates are removed before a comment is sent to Claude.
+- Drafts that mention testimonials or patient stories are flagged for written authorization.
 
-These guardrails reduce risk. They don't replace your practice's policies or legal review.
+Before using HIPAA mode with real patients, sign a Business Associate Agreement with
+Anthropic and have your privacy officer review the rules. These checks reduce risk; they
+don't replace a practice's policies or legal review.
 
 ## Project layout
 
 ```
 tbs_social/
   ai.py          Claude: post generation, comment triage, performance summary (+ offline demo AI)
-  compliance.py  PHI / patient-confirmation / banned-phrase / emergency checks
+  compliance.py  Banned-phrase and privacy checks, plus HIPAA-mode PHI checks
   engine.py      The monitoring cycle and every outbound action
   platforms/     mock, Facebook Page, Instagram Business (add LinkedIn etc. by subclassing Platform)
   web.py         Dashboard (FastAPI + Jinja templates)

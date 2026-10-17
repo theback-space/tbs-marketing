@@ -15,7 +15,7 @@ def test_inbound_clean_praise_has_no_signals():
 
 
 def test_reply_confirming_patient_relationship_is_blocked():
-    issues = compliance.check_outbound("Hope your treatment is going well!", BRAND, is_reply=True)
+    issues = compliance.check_outbound("Hope your treatment is going well!", BRAND, is_reply=True, hipaa=True)
     assert any("HIPAA" in i for i in issues)
 
 
@@ -45,5 +45,12 @@ def test_redaction_strips_identifiers():
 
 def test_patient_confirmation_with_intervening_words():
     for text in ("See you at your next appointment!", "Hope your recent MRI results were okay"):
-        assert compliance.check_outbound(text, BRAND, is_reply=True), text
+        assert compliance.check_outbound(text, BRAND, is_reply=True, hipaa=True), text
     assert compliance.scan_inbound("Loved my first session today")
+
+
+def test_standard_mode_skips_hipaa_checks_but_keeps_basics():
+    assert compliance.check_outbound("Hope your treatment is going well!", BRAND, is_reply=True) == []
+    assert compliance.check_outbound("Read our customer testimonial", BRAND, is_reply=False) == []
+    assert compliance.check_outbound("A guaranteed win", BRAND, is_reply=False)
+    assert compliance.check_outbound("We'll call you on 555-201-3344", BRAND, is_reply=True)

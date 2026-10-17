@@ -115,3 +115,15 @@ def test_banned_phrase_blocks_approval(make_engine):
     [pid] = engine.generate_drafts("mock", 1, None)
     with pytest.raises(ComplianceBlocked):
         engine.approve_post(pid, body="A guaranteed fix for back pain")
+
+
+def test_standard_mode_does_not_flag_health_details(make_engine):
+    engine = make_engine("assist", hipaa=False)
+    for _ in range(3):
+        engine.run_cycle()
+    rows = interactions(engine)
+    assert all(r["phi_risk"] == 0 for r in rows.values())
+    assert "PHI" not in (rows["jen.k"]["triage_reason"] or "")
+    # complaints and questions still go to staff; praise is still handled automatically
+    assert rows["mike_r"]["needs_human"] == 1 and rows["runner_amy"]["needs_human"] == 1
+    assert rows["sam_lifts"]["status"] == "replied"

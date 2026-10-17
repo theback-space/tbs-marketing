@@ -23,7 +23,7 @@ def build_engine(demo: bool) -> Engine:
         ai = OfflineAI(brand)
     else:
         from tbs_social.ai import ClaudeContentAI
-        ai = ClaudeContentAI(brand)
+        ai = ClaudeContentAI(brand, hipaa=settings.hipaa)
     return Engine(DB(settings.db_path), build_platforms(settings), ai, brand, settings)
 
 

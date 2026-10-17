@@ -46,7 +46,8 @@ class Engine:
     def generate_drafts(self, platform: str, count: int = 3, topic: str | None = None) -> list[int]:
         ids = []
         for draft in self.ai.generate_posts(platform, count, topic):
-            issues = compliance.check_outbound(draft.body, self.brand, is_reply=False)
+            issues = compliance.check_outbound(draft.body, self.brand, is_reply=False,
+                                               hipaa=self.settings.hipaa)
             ids.append(self.db.add_post(platform, draft.body, pillar=draft.pillar,
                                         image_idea=draft.image_idea, compliance_notes=issues))
         return ids
@@ -57,7 +58,7 @@ class Engine:
         if post is None:
             raise KeyError(post_id)
         body = body if body is not None else post["body"]
-        issues = compliance.check_outbound(body, self.brand, is_reply=False)
+        issues = compliance.check_outbound(body, self.brand, is_reply=False, hipaa=self.settings.hipaa)
         blocking = [i for i in issues if "banned phrase" in i]
         if blocking:
             raise ComplianceBlocked("; ".join(blocking))
@@ -89,7 +90,7 @@ class Engine:
         row = self.db.get_interaction(interaction_id)
         if row is None:
             raise KeyError(interaction_id)
-        issues = compliance.check_outbound(text, self.brand, is_reply=True)
+        issues = compliance.check_outbound(text, self.brand, is_reply=True, hipaa=self.settings.hipaa)
         if issues:
             raise ComplianceBlocked("; ".join(issues))
         platform = self.platforms[row["platform"]]
@@ -133,8 +134,9 @@ class Engine:
                 continue  # already seen
             report.new_interactions += 1
 
-            phi_signals = compliance.scan_inbound(item.text)
-            emergency = compliance.is_emergency(item.text)
+            hipaa = self.settings.hipaa
+            phi_signals = compliance.scan_inbound(item.text) if hipaa else []
+            emergency = hipaa and compliance.is_emergency(item.text)
             try:
                 t = self.ai.triage(name, item.text, item.author, phi_signals)
             except Exception as e:  # never let one comment stall the cycle
@@ -145,7 +147,8 @@ class Engine:
                 continue
 
             reply = t.reply.strip()
-            reply_issues = compliance.check_outbound(reply, self.brand, is_reply=True) if reply else []
+            reply_issues = compliance.check_outbound(
+                reply, self.brand, is_reply=True, hipaa=hipaa) if reply else []
             reasons = [t.reason]
             if phi_signals:
                 reasons.append("PHI signals: " + ", ".join(phi_signals))

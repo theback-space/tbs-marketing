@@ -1,8 +1,9 @@
 """Deterministic compliance checks that run regardless of what the AI says.
 
-These are deliberately conservative: a false positive costs a human click, a false
-negative can put patient information or a misleading health claim in public.
-They complement — not replace — the practice's own HIPAA policies and review.
+Banned phrases and other people's contact details are always checked. The PHI,
+patient-confirmation and emergency checks only apply in HIPAA mode (TBS_COMPLIANCE=hipaa),
+for accounts that talk to patients. They are deliberately conservative and complement —
+not replace — a practice's own HIPAA policies and review.
 """
 
 from __future__ import annotations
@@ -55,24 +56,29 @@ def is_emergency(text: str) -> bool:
     return bool(_EMERGENCY.search(text))
 
 
-def check_outbound(text: str, brand: Brand, *, is_reply: bool) -> list[str]:
+def check_outbound(text: str, brand: Brand, *, is_reply: bool, hipaa: bool = False) -> list[str]:
     """Return compliance issues with text we are about to publish (empty list = clean)."""
     issues: list[str] = []
     lowered = text.lower()
     for phrase in brand.banned_phrases:
         if re.search(rf"\b{re.escape(phrase.lower())}\b", lowered):
             issues.append(f"uses banned phrase '{phrase}'")
-    if is_reply and _PATIENT_CONFIRMATION.search(text):
-        issues.append("public reply could confirm the person is a patient (HIPAA)")
     if is_reply:
+        # Never repeat someone's personal identifiers or contact details back in public.
         own_contacts = {brand.contact_email.lower()} if brand.contact_email else set()
+        always = {"email address", "phone number", "possible SSN", "identifier keyword"}
         for label in scan_inbound(text):
             if label == "email address" and own_contacts and all(
                     e.lower() in own_contacts for e in re.findall(r"[\w.+-]+@[\w-]+\.[\w.]+", text)):
                 continue
-            if label in ("mentions a medical condition",):
+            if label == "mentions a medical condition":
                 continue  # general education about conditions is fine in a reply
-            issues.append(f"reply contains {label}")
+            if hipaa or label in always:
+                issues.append(f"reply contains {label}")
+    if not hipaa:
+        return issues
+    if is_reply and _PATIENT_CONFIRMATION.search(text):
+        issues.append("public reply could confirm the person is a patient (HIPAA)")
     if re.search(r"\b(testimonial|patient story|our patient)\b", lowered):
         issues.append("references patients/testimonials — confirm written HIPAA authorization")
     return issues

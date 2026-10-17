@@ -54,6 +54,7 @@ class Settings:
     brand_file: str = "brand.toml"
     platforms: tuple[str, ...] = ("mock",)
     automation: str = "approve"  # "approve" | "assist"
+    hipaa: bool = False          # patient-facing accounts: PHI flagging, redaction, patient-confirmation blocks
     max_auto_likes: int = 20
     max_auto_replies: int = 10
     meta_page_id: str = ""
@@ -70,6 +71,9 @@ class Settings:
         automation = env("TBS_AUTOMATION", "approve").strip().lower()
         if automation not in ("approve", "assist"):
             raise ValueError("TBS_AUTOMATION must be 'approve' or 'assist'")
+        compliance = env("TBS_COMPLIANCE", "standard").strip().lower()
+        if compliance not in ("standard", "hipaa"):
+            raise ValueError("TBS_COMPLIANCE must be 'standard' or 'hipaa'")
         return cls(
             db_path=env("TBS_DB_PATH", "tbs_social.db"),
             brand_file=env("TBS_BRAND_FILE", "brand.toml"),
@@ -77,6 +81,7 @@ class Settings:
                 p.strip().lower() for p in env("TBS_PLATFORMS", "mock").split(",") if p.strip()
             ),
             automation=automation,
+            hipaa=compliance == "hipaa",
             max_auto_likes=int(env("TBS_MAX_AUTO_LIKES", "20")),
             max_auto_replies=int(env("TBS_MAX_AUTO_REPLIES", "10")),
             meta_page_id=env("META_PAGE_ID", ""),
