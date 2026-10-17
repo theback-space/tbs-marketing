@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS interactions (
     id INTEGER PRIMARY KEY,
     platform TEXT NOT NULL,
     external_id TEXT NOT NULL,
-    kind TEXT NOT NULL,                          -- comment | mention | message
+    kind TEXT NOT NULL,                          -- comment | review | mention | message
     post_external_id TEXT,
     author TEXT,
     text TEXT NOT NULL,

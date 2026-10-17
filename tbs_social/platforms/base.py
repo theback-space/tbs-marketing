@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 @dataclass
 class Inbound:
     external_id: str
-    kind: str                 # comment | mention | message
+    kind: str                 # comment | review | mention | message
     text: str
     author: str | None
     post_external_id: str | None

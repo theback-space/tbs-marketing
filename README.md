@@ -32,15 +32,43 @@ python -m tbs_social --demo serve --monitor-every 1
    `pages_manage_posts, pages_read_engagement, pages_manage_engagement,
    pages_read_user_content, instagram_basic, instagram_content_publish,
    instagram_manage_comments`. Set `META_PAGE_ID`, `META_IG_USER_ID`, `META_PAGE_ACCESS_TOKEN`,
-   then `TBS_PLATFORMS=facebook,instagram`.
-4. Edit `brand.toml` (voice, services, banned phrases, disclaimer).
-5. Run it:
+   then add `facebook,instagram` to `TBS_PLATFORMS`.
+4. **Google Business Profile** (reviews, Google posts, search and maps metrics):
+   1. In Google Cloud, create a project and
+      [request Business Profile API access](https://developers.google.com/my-business/content/prereqs).
+      Approval usually takes a few days or more.
+   2. Once approved, enable the *My Business Account Management*, *My Business Business
+      Information*, *Business Profile Performance* and *Google My Business* APIs.
+   3. Create an OAuth client (type: Web application) and add
+      `https://developers.google.com/oauthplayground` as a redirect URI.
+   4. In the [OAuth Playground](https://developers.google.com/oauthplayground), click the gear,
+      tick *Use your own OAuth credentials*, authorize scope
+      `https://www.googleapis.com/auth/business.manage` while signed in as a manager of the
+      listing, and exchange the code for a refresh token.
+   5. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, then run
+      `python -m tbs_social google-locations` and copy the printed `GBP_ACCOUNT_ID` and
+      `GBP_LOCATION_ID` into `.env`.
+   6. Add `google` to `TBS_PLATFORMS`, e.g. `TBS_PLATFORMS=facebook,instagram,google`.
+5. Edit `brand.toml` (voice, services, banned phrases, disclaimer).
+6. Run it:
    ```bash
    python -m tbs_social serve --monitor-every 15                 # dashboard + monitor
    # or headless, e.g. from cron every 15 min:
    python -m tbs_social monitor --once
    ```
    To expose the dashboard beyond localhost, set `TBS_DASHBOARD_PASSWORD` and put it behind HTTPS.
+
+## What each platform supports
+
+| | Publish | Read | Reply | Like | Metrics |
+|---|---|---|---|---|---|
+| Facebook Page | Text or photo posts | Comments | Yes | Comments | Followers, reactions, comments, shares |
+| Instagram Business | Photo posts (image required) | Comments | Yes | No | Followers, likes, comments |
+| Google Business Profile | Updates on your listing (1,500 chars) | Reviews not yet answered | Yes | No | Rating, review count, search/maps views, calls, website clicks, directions, bookings (last 28 days) |
+
+Google reviews arrive in the Inbox with their star rating. Reviews already answered (here or
+on Google) are skipped. In `assist` mode, glowing reviews get a short thank-you automatically;
+anything critical waits for staff.
 
 ## Automation levels
 
@@ -89,7 +117,8 @@ tbs_social/
   ai.py          Claude: post generation, comment triage, performance summary (+ offline demo AI)
   compliance.py  Banned-phrase and privacy checks, plus HIPAA-mode PHI checks
   engine.py      The monitoring cycle and every outbound action
-  platforms/     mock, Facebook Page, Instagram Business (add LinkedIn etc. by subclassing Platform)
+  platforms/     mock, Facebook Page, Instagram Business, Google Business Profile
+                 (add more by subclassing Platform)
   web.py         Dashboard (FastAPI + Jinja templates)
   db.py          SQLite storage
   cli.py         serve | monitor | generate | report

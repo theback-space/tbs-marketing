@@ -16,6 +16,11 @@ def build_platforms(settings: Settings) -> dict[str, Platform]:
             from tbs_social.platforms.meta import InstagramBusiness
             platforms[name] = InstagramBusiness(settings.meta_ig_user_id, settings.meta_page_token,
                                                 settings.meta_graph_version)
+        elif name == "google":
+            from tbs_social.platforms.google import GoogleBusinessProfile
+            platforms[name] = GoogleBusinessProfile(
+                settings.gbp_account_id, settings.gbp_location_id, settings.google_client_id,
+                settings.google_client_secret, settings.google_refresh_token)
         else:
             raise PlatformError(f"Unknown platform '{name}'")
     return platforms

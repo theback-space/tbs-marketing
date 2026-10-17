@@ -61,6 +61,11 @@ class Settings:
     meta_page_token: str = ""
     meta_ig_user_id: str = ""
     meta_graph_version: str = "v21.0"
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_refresh_token: str = ""
+    gbp_account_id: str = ""
+    gbp_location_id: str = ""
     dashboard_user: str = "admin"
     dashboard_password: str = ""
 
@@ -88,6 +93,11 @@ class Settings:
             meta_page_token=env("META_PAGE_ACCESS_TOKEN", ""),
             meta_ig_user_id=env("META_IG_USER_ID", ""),
             meta_graph_version=env("META_GRAPH_VERSION", "v21.0"),
+            google_client_id=env("GOOGLE_CLIENT_ID", ""),
+            google_client_secret=env("GOOGLE_CLIENT_SECRET", ""),
+            google_refresh_token=env("GOOGLE_REFRESH_TOKEN", ""),
+            gbp_account_id=env("GBP_ACCOUNT_ID", ""),
+            gbp_location_id=env("GBP_LOCATION_ID", ""),
             dashboard_user=env("TBS_DASHBOARD_USER", "admin"),
             dashboard_password=env("TBS_DASHBOARD_PASSWORD", ""),
         )

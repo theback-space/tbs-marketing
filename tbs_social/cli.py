@@ -61,9 +61,17 @@ def main(argv: list[str] | None = None) -> None:
     g.add_argument("--topic")
 
     sub.add_parser("report", help="print the latest metrics and an AI summary")
+    sub.add_parser("google-locations", help="list Google Business Profile account and location IDs")
 
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    if args.cmd == "google-locations":
+        from tbs_social.platforms.google import list_locations
+        s = Settings.from_env()
+        for account_id, location_id, title in list_locations(
+                s.google_client_id, s.google_client_secret, s.google_refresh_token):
+            print(f"GBP_ACCOUNT_ID={account_id}  GBP_LOCATION_ID={location_id}  # {title}")
+        return
     engine = build_engine(args.demo)
     lock = threading.Lock()
 

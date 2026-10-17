@@ -24,6 +24,8 @@ PLATFORM_GUIDES = {
     "facebook": "Facebook Page post: 60-150 words, conversational, one clear call to action, 0-3 hashtags.",
     "instagram": "Instagram caption: hook in the first line, 50-120 words, line breaks for readability, "
                  "5-10 relevant hashtags at the end. Describe the image to pair it with.",
+    "google": "Google Business Profile update: 40-120 words, local and practical, plain text with no "
+              "hashtags, one clear next step (call, book, visit). Hard limit 1500 characters.",
     "linkedin": "LinkedIn post: professional but human, 80-200 words, insight-led, 3-5 hashtags.",
     "mock": "Generic social post: 50-120 words, 2-4 hashtags.",
 }
