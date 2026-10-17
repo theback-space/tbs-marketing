@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row" style="justify-content: space-between; margin: 0 0 16px;">
+  <h1 style="margin:0">Overview</h1>
+  <div class="row" style="margin:0">
+    <form method="post" action="/summary"><button>AI performance summary</button></form>
+    <form method="post" action="/cycle"><button class="primary">Run monitoring now</button></form>
+  </div>
+</div>
+
+{% if summary %}<div class="card"><strong>What the numbers say</strong><div style="white-space: pre-wrap">{{ summary }}</div></div>{% endif %}
+
+{% if not accounts %}
+  <div class="card">No metrics yet. Click <em>Run monitoring now</em> or start the monitor with <code>python -m tbs_social monitor</code>.</div>
+{% endif %}
+
+{% for a in accounts %}
+  <h2>{{ a.platform|capitalize }} <span class="muted">· updated {{ a.captured_at }}</span></h2>
+  <div class="grid">
+    {% for k, v in a.data.items() %}
+      <div class="card stat">
+        <div class="k">{{ k|replace('_', ' ') }}</div>
+        <div class="v">{{ '{:,.0f}'.format(v) if v is number else v }}</div>
+        {% set series = history[a.platform] | map(attribute='data') | map(attribute=k) | select('number') | list %}
+        {% if series|length > 1 %}
+          {% set lo = series|min %}{% set hi = series|max %}{% set span = (hi - lo) or 1 %}
+          <svg class="spark" viewBox="0 0 100 36" preserveAspectRatio="none" aria-label="{{ k }} trend">
+            <polyline points="{% for s in series %}{{ loop.index0 * 100 / (series|length - 1) }},{{ 33 - (s - lo) * 30 / span }} {% endfor %}"/>
+          </svg>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endfor %}
+
+{% if top %}
+<h2>Top posts by engagement</h2>
+<div class="card table-wrap">
+<table>
+  <tr><th>Platform</th><th>Post</th><th>Metrics</th></tr>
+  {% for r in top %}
+  <tr>
+    <td>{{ r.platform }}</td>
+    <td>{{ (posts[r.external_id].body[:90] ~ '…') if r.external_id in posts else r.external_id }}</td>
+    <td class="muted">{% for k, v in r.data.items() %}{{ k }} {{ v }}{{ ' · ' if not loop.last }}{% endfor %}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% endif %}
+{% endblock %}
