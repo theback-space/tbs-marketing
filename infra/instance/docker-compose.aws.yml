@@ -1,0 +1,22 @@
+# AWS overrides: data on the persistent EBS volume, logs to CloudWatch.
+services:
+  social:
+    image: tbs-social:${TBS_RELEASE}
+    volumes:
+      - /data/app:/data
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${TBS_REGION}
+        awslogs-group: ${TBS_LOG_GROUP}
+        awslogs-stream: social
+
+  caddy:
+    volumes:
+      - /data/caddy:/data
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${TBS_REGION}
+        awslogs-group: ${TBS_LOG_GROUP}
+        awslogs-stream: caddy

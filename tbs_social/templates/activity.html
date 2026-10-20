@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Activity log</h1>
+<p class="muted">Every post, reply and like the system makes, and whether a person or the automation did it.</p>
+<div class="card table-wrap"><table>
+  <tr><th>When</th><th>Platform</th><th>Action</th><th>By</th><th>Outcome</th><th>Detail</th></tr>
+  {% for a in actions %}
+  <tr>
+    <td class="muted">{{ a.created_at }}</td><td>{{ a.platform }}</td><td>{{ a.kind }}</td>
+    <td>{{ 'automation' if a.automated else 'staff' }}</td><td>{{ a.outcome }}</td>
+    <td>{{ a.detail[:140] }}</td>
+  </tr>
+  {% else %}<tr><td colspan="6" class="muted">No activity yet.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

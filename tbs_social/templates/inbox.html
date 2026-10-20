@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row" style="justify-content: space-between; margin: 0 0 16px;">
+  <h1 style="margin:0">Inbox</h1>
+  <div class="muted"><a href="/inbox?show=open">Open</a> · <a href="/inbox?show=all">All</a></div>
+</div>
+<p class="muted">Items flagged for staff appear first. Replies are checked again for compliance issues before they are sent.</p>
+{% for r in rows %}
+<div class="card">
+  <div class="row" style="margin:0">
+    <strong>{{ r.author or 'unknown' }}</strong>
+    <span class="muted">{{ r.platform }} · {{ r.kind }} · {{ r.received_at }}</span>
+  </div>
+  <div style="margin-top:4px">
+    {% if r.phi_risk %}<span class="tag phi">health details</span>{% endif %}
+    {% if r.needs_human %}<span class="tag human">needs staff</span>{% endif %}
+    {% if r.sentiment %}<span class="tag {{ r.sentiment }}">{{ r.sentiment }}</span>{% endif %}
+    {% if r.intent %}<span class="tag">{{ r.intent|replace('_', ' ') }}</span>{% endif %}
+    {% if r.liked %}<span class="tag">liked</span>{% endif %}
+    <span class="tag">{{ r.status }}</span>
+  </div>
+  <blockquote>{{ r.text }}</blockquote>
+  {% if r.triage_reason %}<div class="note">{{ r.triage_reason }}</div>{% endif %}
+  {% if r.status in ('drafted', 'new') %}
+  <form method="post" action="/inbox/{{ r.id }}/reply">
+    <textarea name="text" placeholder="Write a reply…">{{ r.draft_reply or '' }}</textarea>
+    <div class="row">
+      <button class="primary">Send reply</button>
+      {% if can_like.get(r.platform) and not r.liked and not r.phi_risk %}
+        <button formaction="/inbox/{{ r.id }}/like">Like</button>
+      {% endif %}
+      <button formaction="/inbox/{{ r.id }}/dismiss">Dismiss</button>
+    </div>
+  </form>
+  {% elif r.draft_reply %}
+    <div class="muted">Our reply:</div><blockquote>{{ r.draft_reply }}</blockquote>
+  {% endif %}
+</div>
+{% else %}
+<div class="card">Nothing waiting. New comments arrive with each monitoring cycle.</div>
+{% endfor %}
+{% endblock %}

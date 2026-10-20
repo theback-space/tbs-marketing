@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Content</h1>
+<div class="card">
+  <form method="post" action="/content/generate">
+    <strong>Generate drafts</strong>
+    <div class="row">
+      <select name="platform">{% for p in platforms %}<option>{{ p }}</option>{% endfor %}</select>
+      <input name="count" type="number" min="1" max="10" value="3" style="width: 80px">
+      <input name="topic" placeholder="Topic (optional) — e.g. desk setup for working from home" style="flex: 1; min-width: 220px">
+      <button class="primary">Generate</button>
+    </div>
+  </form>
+</div>
+
+<h2>Drafts awaiting review</h2>
+{% for p in drafts %}
+<div class="card">
+  <div class="muted">#{{ p.id }} · {{ p.platform }} · {{ p.pillar or '' }}</div>
+  {% if p.image_idea %}<div class="muted">Image idea: {{ p.image_idea }}</div>{% endif %}
+  {% for issue in (p.compliance_notes or '[]')|fromjson %}<div class="note">{{ issue }}</div>{% endfor %}
+  {% if p.platform in manual %}
+  <form method="post" action="/content/{{ p.id }}/posted">
+    <textarea name="body" id="body-{{ p.id }}" style="min-height: 140px">{{ p.body }}</textarea>
+    <div class="muted">{{ p.platform|capitalize }} isn't connected yet — copy this, post it yourself, then mark it posted.</div>
+    <div class="row">
+      <button type="button" class="primary" onclick="copyDraft({{ p.id }}, this)">Copy text</button>
+      <button>Mark as posted</button>
+      <button formaction="/content/{{ p.id }}/reject">Reject</button>
+    </div>
+  </form>
+  {% else %}
+  <form method="post" action="/content/{{ p.id }}/approve">
+    <textarea name="body" style="min-height: 140px">{{ p.body }}</textarea>
+    <div class="row">
+      <input name="image_url" placeholder="Image URL{{ ' (required for Instagram)' if p.platform == 'instagram' }}" style="flex: 1; min-width: 200px" value="{{ p.image_url or '' }}">
+      <label class="muted">Publish at (UTC) <input type="datetime-local" name="scheduled_for"></label>
+    </div>
+    <div class="row">
+      <button class="primary">Approve</button>
+      <button formaction="/content/{{ p.id }}/reject">Reject</button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% else %}
+<div class="card muted">No drafts. Generate some above.</div>
+{% endfor %}
+
+{% if failed %}
+<h2>Failed to publish</h2>
+{% for p in failed %}<div class="card"><div class="note">{{ p.error }}</div><pre class="post">{{ p.body }}</pre></div>{% endfor %}
+{% endif %}
+
+<h2>Queued</h2>
+<div class="card table-wrap"><table>
+  <tr><th>#</th><th>Platform</th><th>When</th><th>Post</th></tr>
+  {% for p in queued %}<tr><td>{{ p.id }}</td><td>{{ p.platform }}</td><td>{{ p.scheduled_for or 'next cycle' }}</td><td>{{ p.body[:120] }}…</td></tr>
+  {% else %}<tr><td colspan="4" class="muted">Nothing queued.</td></tr>{% endfor %}
+</table></div>
+
+<h2>Recently published</h2>
+<div class="card table-wrap"><table>
+  <tr><th>#</th><th>Platform</th><th>Published</th><th>Post</th></tr>
+  {% for p in published %}<tr><td>{{ p.id }}</td><td>{{ p.platform }}{{ ' (by hand)' if not p.external_id }}</td><td>{{ p.published_at }}</td><td>{{ p.body[:120] }}…</td></tr>
+  {% else %}<tr><td colspan="4" class="muted">Nothing published yet.</td></tr>{% endfor %}
+</table></div>
+<script>
+function copyDraft(id, button) {
+  const text = document.getElementById("body-" + id).value;
+  navigator.clipboard.writeText(text).then(() => {
+    button.textContent = "Copied";
+    setTimeout(() => { button.textContent = "Copy text"; }, 2000);
+  }, () => { button.textContent = "Select the text and copy it"; });
+}
+</script>
+{% endblock %}
