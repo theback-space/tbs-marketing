@@ -66,3 +66,17 @@ def test_redeploy_command_is_scoped(stack):
     send = [s for p in policies.values() for s in p["Properties"]["PolicyDocument"]["Statement"]
             if s["Action"] == "ssm:SendCommand"]
     assert len(send) == 1 and "*" not in json.dumps(send[0]["Resource"])
+
+
+def test_app_refuses_any_other_account():
+    import os
+    import subprocess
+    import sys
+    infra = Path(__file__).parents[1]
+    ctx = json.dumps(CONTEXT)
+    env = {**os.environ, "CDK_DEFAULT_ACCOUNT": "567287408701", "CDK_CONTEXT_JSON": ctx,
+           "CDK_OUTDIR": str(infra / "cdk.out" / "guard-test")}
+    run = subprocess.run([sys.executable, "app.py"], cwd=infra, env=env, capture_output=True, text=True)
+    assert run.returncode != 0
+    assert "Refusing to run: logged in to AWS account 567287408701" in run.stderr
+    assert CONTEXT["accountId"] == "879022682926"
