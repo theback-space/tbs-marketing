@@ -65,16 +65,37 @@ for it on the Content page, edit them, click **Copy text**, post them yourself, 
 **Mark as posted** so the activity log stays complete. Move the platform to `TBS_PLATFORMS`
 once its credentials are set up and the app will post for you.
 
-## Running on a server
+## Running on a server (AWS Lightsail)
 
-```bash
-cp .env.example .env    # fill in keys and set TBS_DASHBOARD_PASSWORD
-docker compose up -d --build
-```
+Runs as its own Lightsail instance, separate from any other app, for about $7/month.
 
-The dashboard listens on 127.0.0.1:8000. Put an HTTPS reverse proxy (Caddy, nginx, or your
-host's load balancer) in front of it before exposing it. The database lives in the
-`social-data` volume.
+1. **Create the server.** In the [Lightsail console](https://lightsail.aws.amazon.com): Create
+   instance → Linux/Unix → OS only → **Ubuntu 24.04** → the **1 GB** plan. Name it `tbs-social`.
+2. **Give it a fixed address.** Networking → Create static IP → attach it to `tbs-social`.
+3. **Open HTTPS.** Instance → Networking → IPv4 firewall → Add rule → **HTTPS (443)**.
+   SSH (22) and HTTP (80) are open by default; keep 80 for certificate renewal.
+4. **Point a subdomain at it.** Where the-back.space's DNS is managed, add an **A record**
+   `social` → the static IP. Wait until `social.the-back.space` resolves.
+5. **Get the code onto the server.** Instance → *Connect using SSH*, then:
+   ```bash
+   ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 && cat ~/.ssh/id_ed25519.pub
+   ```
+   Add the printed key on GitHub: repo → Settings → Deploy keys → Add (read-only). Then:
+   ```bash
+   git clone git@github.com:theback-space/tbs-marketing.git && cd tbs-marketing
+   git checkout claude/social-media-cms-igonlo   # or main once merged
+   ```
+6. **Configure and start.**
+   ```bash
+   bash deploy/setup.sh      # installs Docker, creates .env on first run
+   nano .env                 # set TBS_DOMAIN=social.the-back.space, TBS_DASHBOARD_PASSWORD,
+                             # ANTHROPIC_API_KEY, platform keys
+   bash deploy/setup.sh      # builds and starts the app with HTTPS
+   ```
+7. **Turn on backups.** Instance → Snapshots → enable **automatic snapshots**.
+
+To update later: `git pull && bash deploy/setup.sh`. For local use, `docker compose up -d`
+runs the app alone on http://127.0.0.1:8000.
 
 ## What each platform supports
 

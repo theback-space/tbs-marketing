@@ -1,0 +1,28 @@
+# Production: the app plus Caddy, which gets and renews the HTTPS certificate for TBS_DOMAIN.
+# Usage on the server:  docker compose -f docker-compose.prod.yml up -d --build
+services:
+  social:
+    build: .
+    env_file: .env
+    volumes:
+      - ./brand.toml:/app/brand.toml:ro
+      - social-data:/data
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.10.2
+    environment:
+      TBS_DOMAIN: ${TBS_DOMAIN:?set TBS_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - social
+    restart: unless-stopped
+
+volumes:
+  social-data:
+  caddy-data:
