@@ -53,6 +53,7 @@ class Settings:
     db_path: str = "tbs_social.db"
     brand_file: str = "brand.toml"
     platforms: tuple[str, ...] = ("mock",)
+    manual_platforms: tuple[str, ...] = ()  # drafts only; staff copy, paste and mark as posted
     automation: str = "approve"  # "approve" | "assist"
     hipaa: bool = False          # patient-facing accounts: PHI flagging, redaction, patient-confirmation blocks
     max_auto_likes: int = 20
@@ -84,6 +85,9 @@ class Settings:
             brand_file=env("TBS_BRAND_FILE", "brand.toml"),
             platforms=tuple(
                 p.strip().lower() for p in env("TBS_PLATFORMS", "mock").split(",") if p.strip()
+            ),
+            manual_platforms=tuple(
+                p.strip().lower() for p in env("TBS_MANUAL_PLATFORMS", "").split(",") if p.strip()
             ),
             automation=automation,
             hipaa=compliance == "hipaa",

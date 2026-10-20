@@ -66,6 +66,20 @@ class Engine:
                             scheduled_for=scheduled_for or None, status="approved",
                             compliance_notes=json.dumps(issues))
 
+    def mark_posted_manually(self, post_id: int, body: str) -> None:
+        """Record a draft that staff copied and posted themselves on an unconnected platform."""
+        post = self.db.get_post(post_id)
+        if post is None:
+            raise KeyError(post_id)
+        issues = compliance.check_outbound(body, self.brand, is_reply=False, hipaa=self.settings.hipaa)
+        blocking = [i for i in issues if "banned phrase" in i]
+        if blocking:
+            raise ComplianceBlocked("; ".join(blocking))
+        self.db.update_post(post_id, body=body, status="published", published_at=now(),
+                            compliance_notes=json.dumps(issues))
+        self.db.log_action(post["platform"], "publish", str(post_id), detail=body[:120],
+                           automated=False, outcome="manual")
+
     def publish_due(self, report: CycleReport) -> None:
         for post in self.db.due_posts(now()):
             platform = self.platforms.get(post["platform"])

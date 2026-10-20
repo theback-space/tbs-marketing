@@ -35,3 +35,27 @@ def test_password_required_when_set(make_engine):
     client = TestClient(create_app(engine))
     assert client.get("/").status_code == 401
     assert client.get("/", auth=("admin", "s3cret")).status_code == 200
+
+
+def test_manual_platform_drafts_copy_and_mark_posted(make_engine):
+    from dataclasses import replace
+    engine = make_engine()
+    engine.settings = replace(engine.settings, manual_platforms=("google",))
+    client = TestClient(create_app(engine, threading.Lock()))
+    client.post("/content/generate", data={"platform": "google", "count": 1, "topic": "Saturday hours"})
+    [draft] = engine.db.list_posts("draft")
+    assert draft["platform"] == "google"
+    page = client.get("/content").text
+    assert "Copy text" in page and "Mark as posted" in page
+
+    blocked = client.post(f"/content/{draft['id']}/posted", data={"body": "A guaranteed fix"})
+    assert "Not marked" in blocked.text
+    ok = client.post(f"/content/{draft['id']}/posted", data={"body": "Now open Saturdays 9-1."})
+    assert "Marked as posted" in ok.text
+    post = engine.db.get_post(draft["id"])
+    assert post["status"] == "published" and post["body"] == "Now open Saturdays 9-1."
+    [action] = engine.db.list_actions()
+    assert action["outcome"] == "manual" and action["automated"] == 0
+    engine.run_cycle()  # nothing tries to auto-publish a manual platform
+    assert engine.db.get_post(draft["id"])["status"] == "published"
+    assert "(by hand)" in client.get("/content").text

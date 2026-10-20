@@ -1,0 +1,13 @@
+services:
+  social:
+    build: .
+    env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./brand.toml:/app/brand.toml:ro
+      - social-data:/data
+    restart: unless-stopped
+
+volumes:
+  social-data:

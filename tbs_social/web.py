@@ -26,6 +26,7 @@ def create_app(engine: Engine, lock: threading.Lock | None = None) -> FastAPI:
     settings = engine.settings
     security = HTTPBasic(auto_error=False)
     state: dict[str, str] = {"summary": ""}
+    manual = [p for p in settings.manual_platforms if p not in engine.platforms]
 
     def auth(creds: HTTPBasicCredentials | None = Depends(security)) -> None:
         if not settings.dashboard_password:
@@ -45,7 +46,8 @@ def create_app(engine: Engine, lock: threading.Lock | None = None) -> FastAPI:
         db = engine.db
         attention = sum(1 for r in db.list_interactions(("drafted",)) if r["needs_human"])
         return templates.TemplateResponse(request, name, {
-            "brand": engine.brand, "settings": settings, "platforms": list(engine.platforms),
+            "brand": engine.brand, "settings": settings, "platforms": [*engine.platforms, *manual],
+            "manual": manual,
             "attention": attention, "drafts": len(db.list_posts("draft")),
             "msg": request.query_params.get("msg"), "err": request.query_params.get("err"), **ctx})
 
@@ -103,7 +105,7 @@ def create_app(engine: Engine, lock: threading.Lock | None = None) -> FastAPI:
 
     @app.post("/content/generate", dependencies=[Depends(auth)])
     def generate(platform: str = Form(...), count: int = Form(3), topic: str = Form("")):
-        if platform not in engine.platforms:
+        if platform not in engine.platforms and platform not in manual:
             return back("/content", f"Unknown platform {platform}", error=True)
         try:
             with lock:
@@ -127,6 +129,16 @@ def create_app(engine: Engine, lock: threading.Lock | None = None) -> FastAPI:
                 engine.db.update_post(pid, body=body)
                 return back("/content", f"Not approved — {e}", error=True)
         return back("/content", "Approved and queued")
+
+    @app.post("/content/{pid}/posted", dependencies=[Depends(auth)])
+    def posted(pid: int, body: str = Form(...)):
+        with lock:
+            try:
+                engine.mark_posted_manually(pid, body.strip())
+            except ComplianceBlocked as e:
+                engine.db.update_post(pid, body=body)
+                return back("/content", f"Not marked — {e}", error=True)
+        return back("/content", "Marked as posted")
 
     @app.post("/content/{pid}/reject", dependencies=[Depends(auth)])
     def reject(pid: int):

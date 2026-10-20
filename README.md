@@ -58,6 +58,24 @@ python -m tbs_social --demo serve --monitor-every 1
    ```
    To expose the dashboard beyond localhost, set `TBS_DASHBOARD_PASSWORD` and put it behind HTTPS.
 
+## Posting by hand until a platform is connected
+
+Set `TBS_MANUAL_PLATFORMS=google` (or any platform not yet in `TBS_PLATFORMS`). Generate drafts
+for it on the Content page, edit them, click **Copy text**, post them yourself, then click
+**Mark as posted** so the activity log stays complete. Move the platform to `TBS_PLATFORMS`
+once its credentials are set up and the app will post for you.
+
+## Running on a server
+
+```bash
+cp .env.example .env    # fill in keys and set TBS_DASHBOARD_PASSWORD
+docker compose up -d --build
+```
+
+The dashboard listens on 127.0.0.1:8000. Put an HTTPS reverse proxy (Caddy, nginx, or your
+host's load balancer) in front of it before exposing it. The database lives in the
+`social-data` volume.
+
 ## What each platform supports
 
 | | Publish | Read | Reply | Like | Metrics |

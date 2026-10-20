@@ -19,6 +19,17 @@
   <div class="muted">#{{ p.id }} · {{ p.platform }} · {{ p.pillar or '' }}</div>
   {% if p.image_idea %}<div class="muted">Image idea: {{ p.image_idea }}</div>{% endif %}
   {% for issue in (p.compliance_notes or '[]')|fromjson %}<div class="note">{{ issue }}</div>{% endfor %}
+  {% if p.platform in manual %}
+  <form method="post" action="/content/{{ p.id }}/posted">
+    <textarea name="body" id="body-{{ p.id }}" style="min-height: 140px">{{ p.body }}</textarea>
+    <div class="muted">{{ p.platform|capitalize }} isn't connected yet — copy this, post it yourself, then mark it posted.</div>
+    <div class="row">
+      <button type="button" class="primary" onclick="copyDraft({{ p.id }}, this)">Copy text</button>
+      <button>Mark as posted</button>
+      <button formaction="/content/{{ p.id }}/reject">Reject</button>
+    </div>
+  </form>
+  {% else %}
   <form method="post" action="/content/{{ p.id }}/approve">
     <textarea name="body" style="min-height: 140px">{{ p.body }}</textarea>
     <div class="row">
@@ -30,6 +41,7 @@
       <button formaction="/content/{{ p.id }}/reject">Reject</button>
     </div>
   </form>
+  {% endif %}
 </div>
 {% else %}
 <div class="card muted">No drafts. Generate some above.</div>
@@ -50,7 +62,16 @@
 <h2>Recently published</h2>
 <div class="card table-wrap"><table>
   <tr><th>#</th><th>Platform</th><th>Published</th><th>Post</th></tr>
-  {% for p in published %}<tr><td>{{ p.id }}</td><td>{{ p.platform }}</td><td>{{ p.published_at }}</td><td>{{ p.body[:120] }}…</td></tr>
+  {% for p in published %}<tr><td>{{ p.id }}</td><td>{{ p.platform }}{{ ' (by hand)' if not p.external_id }}</td><td>{{ p.published_at }}</td><td>{{ p.body[:120] }}…</td></tr>
   {% else %}<tr><td colspan="4" class="muted">Nothing published yet.</td></tr>{% endfor %}
 </table></div>
+<script>
+function copyDraft(id, button) {
+  const text = document.getElementById("body-" + id).value;
+  navigator.clipboard.writeText(text).then(() => {
+    button.textContent = "Copied";
+    setTimeout(() => { button.textContent = "Copy text"; }, 2000);
+  }, () => { button.textContent = "Select the text and copy it"; });
+}
+</script>
 {% endblock %}
