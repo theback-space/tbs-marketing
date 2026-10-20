@@ -83,7 +83,7 @@ SSM Session Manager. Only ports 80 and 443 are open.
    (e.g. `wecare+marketing@the-back.space`).
 2. **Give yourself access without keys.** IAM Identity Center → AWS accounts → select
    `theback-marketing` → Assign users → your user with the `AdministratorAccess` permission set.
-   On your computer: `aws configure sso` → name the profile `tbs-marketing`, region `us-east-2`.
+   On your computer: `aws configure sso` → pick **theback-marketing (879022682926)**, name the profile `tbs-marketing`, region `us-east-2`. The CDK app refuses to run against any other account.
 3. **Install and bootstrap** (needs Python 3.11+ and Node.js 20+):
    ```bash
    aws sso login --profile tbs-marketing

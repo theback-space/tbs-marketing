@@ -1,6 +1,7 @@
 {
   "app": "python3 app.py",
   "context": {
+    "accountId": "879022682926",
     "region": "us-east-2",
     "domain": "social.the-back.space",
     "platforms": "facebook,instagram",
