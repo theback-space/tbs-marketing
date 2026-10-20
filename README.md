@@ -65,37 +65,56 @@ for it on the Content page, edit them, click **Copy text**, post them yourself, 
 **Mark as posted** so the activity log stays complete. Move the platform to `TBS_PLATFORMS`
 once its credentials are set up and the app will post for you.
 
-## Running on a server (AWS Lightsail)
+## Deploying to AWS (CDK)
 
-Runs as its own Lightsail instance, separate from any other app, for about $7/month.
+The app runs in its **own AWS account**, separate from every other Back Space app, and all of
+its infrastructure is defined in code in `infra/` (Python CDK). Nothing is created by hand.
 
-1. **Create the server.** In the [Lightsail console](https://lightsail.aws.amazon.com): Create
-   instance → Linux/Unix → OS only → **Ubuntu 24.04** → the **1 GB** plan. Name it `tbs-social`.
-2. **Give it a fixed address.** Networking → Create static IP → attach it to `tbs-social`.
-3. **Open HTTPS.** Instance → Networking → IPv4 firewall → Add rule → **HTTPS (443)**.
-   SSH (22) and HTTP (80) are open by default; keep 80 for certificate renewal.
-4. **Point a subdomain at it.** Where the-back.space's DNS is managed, add an **A record**
-   `social` → the static IP. Wait until `social.the-back.space` resolves.
-5. **Get the code onto the server.** Instance → *Connect using SSH*, then:
-   ```bash
-   ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 && cat ~/.ssh/id_ed25519.pub
-   ```
-   Add the printed key on GitHub: repo → Settings → Deploy keys → Add (read-only). Then:
-   ```bash
-   git clone git@github.com:theback-space/tbs-marketing.git && cd tbs-marketing
-   git checkout claude/social-media-cms-igonlo   # or main once merged
-   ```
-6. **Configure and start.**
-   ```bash
-   bash deploy/setup.sh      # installs Docker, creates .env on first run
-   nano .env                 # set TBS_DOMAIN=social.the-back.space, TBS_DASHBOARD_PASSWORD,
-                             # ANTHROPIC_API_KEY, platform keys
-   bash deploy/setup.sh      # builds and starts the app with HTTPS
-   ```
-7. **Turn on backups.** Instance → Snapshots → enable **automatic snapshots**.
+**What gets created** (about $12–15/month): one small ARM server (t4g.micro) running the app
+and Caddy (automatic HTTPS), a fixed public IP, an encrypted data disk that's kept even if the
+server is replaced, daily backups (14 days), a Secrets Manager secret for API keys, CloudWatch
+logs, and a monthly budget alert. There are no SSH keys and no port 22: shell access is through
+SSM Session Manager. Only ports 80 and 443 are open.
 
-To update later: `git pull && bash deploy/setup.sh`. For local use, `docker compose up -d`
-runs the app alone on http://127.0.0.1:8000.
+### One-time setup
+
+1. **Create the account.** In your AWS Organizations management account: AWS accounts →
+   Add an AWS account → name `theback-marketing`, with an email you control
+   (e.g. `wecare+marketing@the-back.space`).
+2. **Give yourself access without keys.** IAM Identity Center → AWS accounts → select
+   `theback-marketing` → Assign users → your user with the `AdministratorAccess` permission set.
+   On your computer: `aws configure sso` → name the profile `tbs-marketing`, region `us-east-2`.
+3. **Install and bootstrap** (needs Python 3.11+ and Node.js 20+):
+   ```bash
+   aws sso login --profile tbs-marketing
+   cd infra
+   python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+   npx aws-cdk@2 bootstrap --profile tbs-marketing
+   ```
+4. **Check the settings** in `infra/cdk.json` (domain, platforms, budget, alert email).
+5. **Deploy:** `npx aws-cdk@2 deploy --profile tbs-marketing`. Commit the `cdk.context.json` this
+   creates: it pins the server image so later deploys don't replace the server.
+6. **Fill in secrets.** Secrets Manager → `tbs-social/env` → Retrieve secret value → Edit.
+   Add `ANTHROPIC_API_KEY` and any Meta/Google values you have. The dashboard password
+   (`TBS_DASHBOARD_PASSWORD`) is already generated; read it here, and log in as `admin`.
+   Platforms with missing credentials automatically stay in copy-and-post mode.
+7. **Point DNS.** Add an A record for the domain in `cdk.json` → the `PublicIp` output.
+8. **Apply the secrets** by running the `RedeployCommand` output, then open the `DashboardUrl`.
+
+### Day to day
+
+- **Release a change:** `npx aws-cdk@2 deploy --profile tbs-marketing`. The host rebuilds itself.
+- **After editing secrets:** run the `RedeployCommand` output.
+- **Logs:** CloudWatch → Log groups → `/tbs-social/app` (streams `social`, `caddy`, and deploy output).
+- **Shell:** the `ShellCommand` output (needs the Session Manager plugin for the AWS CLI).
+- **Replacing the server** (e.g. changing instance type) needs care because the data disk is
+  attached to it: ask Claude Code to plan it, or detach the volume first.
+
+If your organization applies guardrails to every account (SCPs, Config rules forbidding
+`0.0.0.0/0` inbound), allow ports 80/443 on this account's web security group: a public
+HTTPS site needs them.
+
+For local use without AWS, `docker compose up -d` runs the app alone on http://127.0.0.1:8000.
 
 ## What each platform supports
 
@@ -160,7 +179,8 @@ tbs_social/
                  (add more by subclassing Platform)
   web.py         Dashboard (FastAPI + Jinja templates)
   db.py          SQLite storage
-  cli.py         serve | monitor | generate | report
+  cli.py         serve | monitor | generate | report | google-locations
+infra/           AWS CDK app (separate account) and host scripts
 tests/           pytest suite (runs offline)
 ```
 

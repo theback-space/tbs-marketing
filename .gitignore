@@ -6,3 +6,6 @@ __pycache__/
 *.db-journal
 .pytest_cache/
 *.egg-info/
+infra/cdk.out/
+infra/.venv/
+cdk.context.json.bak
